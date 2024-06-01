@@ -1,18 +1,27 @@
-#
-# Build Stage
-#
+# Use an official Maven image to build the application
 FROM maven:3.6.3-openjdk-11-slim AS build
 
-COPY backend/target /home/app/target
+# Set the working directory in the container
+WORKDIR /app
 
-#Apagando os arquivos, exceto o .jar
-RUN bash -O extglob -c 'rm -rfv /home/app/target/!(*.jar)'
+# Copy the pom.xml and the source code to the container
+COPY backend/pom.xml .
+COPY backend/src ./src
 
+# Package the application to create the JAR file
+RUN mvn clean package -DskipTests
 
-#
-# Package stage
-#
-FROM openjdk:11-slim
-COPY --from=build /home/app/target/*.jar /usr/local/lib/springbootapi.jar
+# Use a smaller base image for the final image
+FROM openjdk:11-jre-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the JAR file from the build stage to the final image
+COPY --from=build /app/target/*.jar /app/springbootapp.jar
+
+# Expose port 8080
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/usr/local/lib/springbootapi.jar"]
+
+# Define the command to run the application
+ENTRYPOINT ["java", "-jar", "/app/springbootapp.jar"]
